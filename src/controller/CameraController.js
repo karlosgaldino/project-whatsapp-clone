@@ -1,4 +1,6 @@
-class CameraController{
+import { forEach } from "lodash";
+
+export class CameraController{
 
     constructor(videoEl){
 
@@ -7,6 +9,8 @@ class CameraController{
         navigator.mediaDevices.getUserMedia({
             video: true
         }).then((stream =>{
+
+            this._stream = stream;
             this._videoEl.srcObject = new MediaStream(stream);
             this._videoEl.play();
         })).catch(err=>{
@@ -14,5 +18,24 @@ class CameraController{
         });
 
 
+    }
+
+    stop(){
+
+        this._stream.getTracks().forEach(track=>{
+            track.stop();
+        });
+    }
+
+    takePicture(mineType = 'image/png'){
+
+        let canvas = document.createElement('canvas');
+        let context = canvas.getContext('2d');
+
+        canvas.setAttribute('height', this._videoEl.videoHeight);
+        canvas.setAttribute('width', this._videoEl.videoWidth);
+        context.drawImage(this._videoEl, 0, 0, canvas.width, canvas.height);
+
+        return canvas.toDataURL(mineType);
     }
 }

@@ -36,8 +36,16 @@ export class User extends Model{
         this._data.photo = value;
     }
 
+    get chatId(){
+        return this._data.chatId;
+    }
+
+    set chatId(value){
+        this._data.chatId = value;
+    }
+
     static getContactRef(id){
-        User.getRef().doc(id).collection('contacts');
+        return User.getRef().doc(id).collection('contacts');
     }
 
     static getRef(){
@@ -58,7 +66,6 @@ export class User extends Model{
               s(doc);
 
           })
-
             
         });
     }
@@ -71,11 +78,11 @@ export class User extends Model{
         return User.getContactRef(this.email).doc(btoa(contact.email)).set(contact.toJSON());
     }
 
-    getContacts(){
+    getContacts(filter = ''){
 
         return new Promise((s,f)=>{
 
-            User.getRef().doc(this.email).collection('contacts').onSnapshot(docs => {
+            User.getContactRef(this.email).where('name', '>=', filter).onSnapshot(docs=> {
 
                 let contacts = [];
 

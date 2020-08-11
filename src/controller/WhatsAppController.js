@@ -5,6 +5,7 @@ import {DocumentPreviewController} from './DocumentPreviewController';
 import {Firebase} from './../util/Firebase';
 import { User } from '../model/User';
 import { Chat } from '../model/Chat';
+import {Message} from '../model/Message';
 import { result } from 'lodash';
 
 export class WhatsAppController{
@@ -123,28 +124,96 @@ export class WhatsAppController{
 
                 div.on('click', e=>{
 
-                    this.el.activeName.innerHTML = contact.name;
-                    this.el.activeStatus.innerHTML = contact.status;
-
-                    if(contact.photo){
-                        let img = this.el.activePhoto;
-                        img.src = contact.photo;
-                        img.show();
-                    }
-                    this.el.home.hide();
-                    this.el.main.css({
-                        display: 'flex'
-                    })
+                    this.setActiveChat(contact);
+                    
                 })
                 
                 this.el.contactsMessagesList.appendChild(div);
             });
         });
 
+        this._user.getContacts();
+    }
+
+    setActiveChat(contact){
+
+        if(this._contactActive){
+            Message.getRef(this._contactActive.chatId).onSnapshot(()=>{});
+        }
+
+        this._contactActive = contact;
+
+        this.el.activeName.innerHTML = contact.name;
+        this.el.activeStatus.innerHTML = contact.status;
+
+        if(contact.photo){
+            let img = this.el.activePhoto;
+            img.src = contact.photo;
+            img.show();
+        }
+
+        this.el.home.hide();
+        this.el.main.css({
+            display: 'flex'
+        });
+
+        this.el.panelMessagesContainer.innerHTML= '';
+
+        Message.getRef(this._contactActive.chatId).orderBy('timeStamp').onSnapshot(docs=>{
+            
+            let scrollTop = this.el.panelMessagesContainer.scrollTop;
+            let scrollTopMax = (this.el.panelMessagesContainer.scrollHeight - this.el.panelMessagesContainer.offsetHeight);
+            let autoScroll = (scrollTop >= scrollTopMax);
+
+            docs.forEach(doc=>{
+
+                let data = doc.data();
+                let message = new Message();
+                data.id = doc.id;
+                message.fromJSON(data);
+
+                let me = (data.from == this._user.email)
+
+                if(!this.el.panelMessagesContainer.querySelector('#_'+ data.id)){
+
+                    let view = message.getViewElement(me);
+                    
+                    if(!me){
+                        doc.ref.set({
+                            status:'read'
+                        },{
+                            merge:true
+                        });
+                    }
+                    this.el.panelMessagesContainer.appendChild(view);
+                }else if(me){
+                    let msgEl = this.el.panelMessagesContainer.querySelector('#_'+ data.id);
+                    msgEl.querySelector('.message-status').innerHTML = message.getStatusViewElement().outerHTML;
+                }
+                
+            })
+
+            if(autoScroll){
+                this.el.panelMessagesContainer.scrollTop = this.el.panelMessagesContainer.scrollHeight - this.el.panelMessagesContainer.offsetHeight
+            }else{
+                this.panelMessagesContainer.scrollTop = scrollTop;
+            }   
+        })
 
     }
 
     initEvents(){
+
+        this.el.inputSearchContacts.on('keyup', e=>{
+
+            if (this.el.inputSearchContacts.value.length > 0){
+                this.el.inputSearchContactsPlaceholder.hide();
+
+            }else{
+                this.el.inputSearchContactsPlaceholder.show();
+            }
+            this._user.getContacts(this.el.inputSearchContacts.value);
+        })
 
         this.el.myPhoto.on('click', e=>{
             this.closeAllLeftPanel();
@@ -204,7 +273,7 @@ export class WhatsAppController{
             contact.on('datachange', data=>{
                 if(data.name){
 
-                    Chat.createifNotExixts(this._user.email, contact.email).then(chat=>{
+                    Chat.createIfNotExist(this._user.email, contact.email).then(chat=>{
 
                         contact.chatId = chat.id;
                         this._user.chatId = chat.id;
@@ -247,10 +316,9 @@ export class WhatsAppController{
 
         this.el.inputPhoto.on('change', e =>{
 
-            console.log(this.el.inputPhoto.files);
-
             [...this.el.inputPhoto.files].forEach(file =>{
-                console.log(file);
+
+                Message.sendImage(this._contactActive.chatId, this._user.email, file);
             });
         });
 
@@ -296,6 +364,8 @@ export class WhatsAppController{
         this.el.btnSendPicture.on('click', e=>{
 
             console.log(this.el.pictureCamera.src);
+
+            //let regex = new RegEx
         });
 
         this.el.btnAttachDocument.on('click', e=>{
@@ -423,7 +493,9 @@ export class WhatsAppController{
         });
 
         this.el.btnSend.on('click', e=>{
-            console.log(this.el.inputText.innerHTML);
+            Message.send(this._contactActive.chatId,this._user.email, 'text', this.el.inputText.innerHTML);
+            this.el.inputText.innerHTML='';
+            this.el.panelEmojis.removeClass('open');
         });
 
         this.el.btnEmojis.on('click', e=>{

@@ -1,3 +1,4 @@
+import {Firebase} from '../util/Firebase';
 import { Model } from "./Model";
 
 export class Chat extends Model{
@@ -22,7 +23,6 @@ export class Chat extends Model{
     }
 
     static getRef(){
-
         return Firebase.db().collection('/chats');
     }
     static find(meEmail, contactEmail){
@@ -58,7 +58,7 @@ export class Chat extends Model{
         })
     }
 
-    static createifNotExixts(meEmail, contactEmail){
+    static createIfNotExist(meEmail, contactEmail){
 
         return new Promise((s,f)=>{
             

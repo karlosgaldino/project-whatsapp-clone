@@ -52,7 +52,7 @@ export class User extends Model{
         return Firebase.db().collection('/users');
     }
 
-    static findbyEmail(email){
+    static findbyEmail(email){        
         return User.getRef().doc(email);
     }
 
@@ -62,15 +62,16 @@ export class User extends Model{
 
           User.getRef().doc(id).onSnapshot(doc=>{
 
-              this.fromJSON(doc.data());
-              s(doc);
+            this.doc = doc;  
+            this.fromJSON(doc.data());
+            s(doc);
 
           })
             
         });
     }
 
-    save(){
+    save(){                
         return User.findbyEmail(this.email).set(this.toJSON());
     }
 
